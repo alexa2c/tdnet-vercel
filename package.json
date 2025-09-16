@@ -1,9 +1,0 @@
-{
-  "name": "tdnet-vercel",
-  "private": true,
-  "type": "module",
-  "dependencies": {},
-  "engines": {
-    "node": ">=18"
-  }
-}
