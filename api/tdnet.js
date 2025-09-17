@@ -1,4 +1,4 @@
-// /api/tdnet.js  (CommonJS 版：Vercelで確実に動く)
+// /api/tdnet.js
 const base = "https://webapi.yanoshin.jp/webapi/tdnet";
 
 module.exports = async (req, res) => {
@@ -7,7 +7,7 @@ module.exports = async (req, res) => {
     const limit = req.query.limit ?? "50";
     const hasXBRL = req.query.hasXBRL ?? "1";
 
-    let target = null;
+    let target;
     if (mode === "list") {
       if (!code) return res.status(400).json({ error: "missing code" });
       target = `${base}/list/${encodeURIComponent(code)}.json?limit=${encodeURIComponent(limit)}&hasXBRL=${encodeURIComponent(hasXBRL)}`;
@@ -29,23 +29,20 @@ module.exports = async (req, res) => {
       redirect: "manual"
     });
 
-    const ct = (r.headers.get("content-type") || "").toLowerCase();
     const text = await r.text();
-
-    // リダイレクトやHTMLを可視化（デバッグ）
-    if (r.status >= 300 && r.status < 400) {
-      return res.status(502).json({ upstream_status: r.status, location: r.headers.get("location") });
-    }
-    if (!r.ok || !ct.includes("json")) {
+    // Yanoshin は Content-Type: text/html を返すことがあるので、強制的に JSON で返す
+    try {
+      const data = JSON.parse(text);
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      return res.status(200).json(data);
+    } catch {
+      // JSONじゃない・ブロック/リダイレクト時の可視化
       return res.status(502).json({
         upstream_status: r.status,
-        content_type: ct || "unknown",
+        content_type: r.headers.get("content-type") || "unknown",
         body_head: text.slice(0, 500)
       });
     }
-
-    // JSON文字列をそのまま返す
-    return res.status(200).send(text);
   } catch (e) {
     return res.status(500).json({ error: String(e) });
   }
